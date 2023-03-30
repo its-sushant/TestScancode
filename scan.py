@@ -13,49 +13,45 @@ import execnet
 
 import scanbackend
 
-"""
-This is a module designed to be called from Python 2 or 3 and is the client
-side. See scanbackend for the back server module that runs on Python 2 and runs
-effectively scancode.
-"""
+class scan:
+    def __init__(self, locations):
+        self.root_dir = abspath(normpath(__file__))
+        self.root_dir = dirname(dirname(dirname(self.root_dir)))
+        self.python = join(self.root_dir,'sushant', 'env_scancode', 'bin', 'python')
+        self.spec = 'popen//python={self.python}'.format(**locals())
+        self.gateway = execnet.makegateway(self.spec)
+        self.channel = self.gateway.remote_exec(scanbackend)
+        self.locations = locations
 
+    def scanfiles(self, deserialize=False):
+        """
+        Scan the list of paths at `location` and return the results as an iterable
+        of JSON strings. If `deserialize` is True the iterable contains a python data
+        instead.
+        Each location is scanned independently.
+        """
+        
+        for location in self.locations:
+            # build a mapping of options to use for this scan
+            scan_kwargs = dict(
+                location=location,
+                license=True,
+                license_text=True,
+                license_diag=True,
+                copyright=True,
+                info=True,
+                processes=0,
+            )
 
-def scan(locations, deserialize=False, scancode_root_dir=None):
-    """
-    Scan the list of paths at `location` and return the results as an iterable
-    of JSON strings. If `deserialize` is True the iterable contains a python data
-    instead.
-    Each location is scanned independently.
-    """
-    if not scancode_root_dir:
-        scancode_root_dir = abspath(normpath(__file__))
-        scancode_root_dir = dirname(dirname(dirname(scancode_root_dir)))
-    python = join(scancode_root_dir,'sushant', 'env_scancode', 'bin', 'python')
-    spec = 'popen//python={python}'.format(**locals())
-    gateway = execnet.makegateway(spec)  # NOQA
-    channel = gateway.remote_exec(scanbackend)
-
-    for location in locations:
-        # build a mapping of options to use for this scan
-        scan_kwargs = dict(
-            location=location,
-            license=True,
-            license_text=True,
-            license_diag=True,
-            copyright=True,
-            info=True,
-            processes=0,
-        )
-
-        channel.send(scan_kwargs)  # execute func-call remotely
-        results = channel.receive()
-        if deserialize:
-            results = json.loads(results)
-        yield results
-
+            self.channel.send(scan_kwargs)  # execute func-call remotely
+            results = self.channel.receive()
+            if deserialize:
+                results = json.loads(results)
+            yield results
 
 if __name__ == '__main__':
-    import sys  # NOQA
+    import sys  
     args = sys.argv[1:]
-    for s in scan(args):
+    scanner = scan(args)
+    for s in scanner.scanfiles():
         print(s)
