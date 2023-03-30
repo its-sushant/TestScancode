@@ -3,7 +3,7 @@ A simple exmaple to show how we can call scancode as a function for multiple fil
 
 ## Usage
     `python3 scan.py ./Sampledata/common.c ./Sampledata/r.py ./Sampledata/database.c ./Sampledata/rust.py`
-    `python3 ./Sampledata/`
+    `python3 scan.py ./Sampledata/`
 
 ## Feature
 - can make multiple call at the same time
